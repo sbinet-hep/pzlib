@@ -6,7 +6,6 @@ package pzlib
 
 import (
 	"bytes"
-	"compress/flate"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -17,6 +16,8 @@ import (
 	"runtime"
 	"sync"
 	"unsafe"
+
+	"github.com/klauspost/compress/flate"
 )
 
 const (
