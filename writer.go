@@ -12,10 +12,8 @@ import (
 	"hash"
 	"hash/adler32"
 	"io"
-	"reflect"
 	"runtime"
 	"sync"
-	"unsafe"
 
 	"github.com/klauspost/compress/flate"
 )
@@ -301,20 +299,6 @@ func (z *Writer) Write(p []byte) (int, error) {
 	return len(p), z.checkError()
 }
 
-// Unsafely discards the writer's state and makes it equivalent to
-// the result of NewWriter or NewWriterDict called with dst
-// and w's level, but sets a specific dictionary.
-func resetDict(w *flate.Writer, dst io.Writer, dict []byte) {
-	pointerVal := reflect.ValueOf(w)
-	val := reflect.Indirect(pointerVal)
-	member := val.FieldByName("dict")
-	ptrToDict := unsafe.Pointer(member.UnsafeAddr())
-	realPtrToDict := (*[]byte)(ptrToDict)
-	*realPtrToDict = dict
-
-	w.Reset(dst)
-}
-
 // Step 1: compresses buffer to buffer
 // Step 2: send writer to channel
 // Step 3: Close result channel to indicate we are done
@@ -327,7 +311,7 @@ func (z *Writer) compressBlock(p, prevTail []byte, r result, closed bool) {
 	dest := bytes.NewBuffer(buf[:0])
 
 	compressor := z.dictFlatePool.Get().(*flate.Writer) // Put below
-	resetDict(compressor, dest, prevTail)
+	compressor.ResetDict(dest, prevTail)
 	compressor.Write(p)
 	z.dstPool.Put(p) // Corresponding Get in .Write and .compressCurrent
 
